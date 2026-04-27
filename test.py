@@ -1,40 +1,40 @@
-from config import MYSQL_CONFIG, NEO4J_CONFIG
-import mysql.connector
-from neo4j import GraphDatabase
+from app.cliente_mysql import obtener_conexion
+from app.cliente_neo4j import ClienteNeo4j
 
 
-def test_mysql():
-    print("Probando conexión a MySQL...")
+def probar_mysql():
+    print("Probando conexión con MySQL...")
 
-    conn = mysql.connector.connect(**MYSQL_CONFIG)
-    cursor = conn.cursor()
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
     cursor.execute("SELECT DATABASE();")
-    db = cursor.fetchone()
+    base_datos = cursor.fetchone()[0]
 
-    print(f"Conexión MySQL correcta. Base activa: {db[0]}")
+    cursor.execute("SHOW TABLES;")
+    tablas = cursor.fetchall()
 
     cursor.close()
-    conn.close()
+    conexion.close()
+
+    print(f"Conexión MySQL correcta. Base activa: {base_datos}")
+    print(f"Tablas encontradas: {len(tablas)}")
 
 
-def test_neo4j():
-    print("Probando conexión a Neo4j...")
+def probar_neo4j():
+    print("\nProbando conexión con Neo4j...")
 
-    driver = GraphDatabase.driver(
-        NEO4J_CONFIG["uri"],
-        auth=(NEO4J_CONFIG["user"], NEO4J_CONFIG["password"])
-    )
+    cliente = ClienteNeo4j()
 
-    driver.verify_connectivity()
+    resultado = cliente.ejecutar_lectura("""
+        RETURN 'Conexión Neo4j correcta' AS mensaje
+    """)
 
-    with driver.session() as session:
-        result = session.run("RETURN 'Conexión Neo4j correcta' AS mensaje")
-        print(result.single()["mensaje"])
+    cliente.cerrar()
 
-    driver.close()
+    print(resultado[0]["mensaje"])
 
 
 if __name__ == "__main__":
-    test_mysql()
-    test_neo4j()
+    probar_mysql()
+    probar_neo4j()
