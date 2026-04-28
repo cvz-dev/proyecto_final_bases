@@ -22,7 +22,7 @@ from app.cliente_neo4j import ClienteNeo4j
 
 
 def migrar_nodos(cliente: ClienteNeo4j):
-    print("► Migrando nodos...")
+    print("Se migran nodos")
 
     for fila in obtener_departamentos():
         cliente.ejecutar_escritura(
@@ -41,15 +41,22 @@ def migrar_nodos(cliente: ClienteNeo4j):
     horarios = {}
     for fila in obtener_horarios():
         id_horario = fila["time_slot_id"]
-        horarios.setdefault(id_horario, []).append({
+        
+        datos_del_dia = {
             "day": fila["day"],
             "start_hr": fila["start_hr"],
             "start_min": fila["start_min"],
             "end_hr": fila["end_hr"],
             "end_min": fila["end_min"],
-        })
+        }
+        
+        if id_horario not in horarios:
+            horarios[id_horario] = []
+            
+        horarios[id_horario].append(datos_del_dia)
 
-    for id_horario, bloques in horarios.items():
+    for id_horario in horarios:
+        bloques = horarios[id_horario] 
         cliente.ejecutar_escritura(
             "MERGE (h:TimeSlot {time_slot_id: $id_horario}) "
             "SET h.bloques = $bloques",
@@ -84,11 +91,11 @@ def migrar_nodos(cliente: ClienteNeo4j):
             fila,
         )
 
-    print("  ok nodos creados")
+    print("Termindo")
 
 
 def migrar_relaciones(cliente: ClienteNeo4j):
-    print("► Migrando relaciones...")
+    print("Se migran relaciones")
 
     for fila in obtener_cursos():
         if fila.get("dept_name"):
@@ -154,7 +161,7 @@ def migrar_relaciones(cliente: ClienteNeo4j):
             fila,
         )
 
-    print("  ok relaciones creadas")
+    print("Terminado")
 
 
 def ejecutar_migracion(limpiar: bool = False):

@@ -23,14 +23,18 @@ def limpiar_fila(fila: dict) -> dict:
     }
 
 
-def consultar_todo(consulta: str, parametros=None) -> list[dict]:
+def consultar_todo(consulta):
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
-    cursor.execute(consulta, parametros or ())
+    cursor.execute(consulta, ())
     filas = cursor.fetchall()
     cursor.close()
     conexion.close()
-    return [limpiar_fila(fila) for fila in filas]
+    filas_limpias = []
+    for fila in filas:
+        fila_arreglada = limpiar_fila(fila)
+        filas_limpias.append(fila_arreglada)
+    return filas_limpias
 
 
 # Lecturas por tabla
