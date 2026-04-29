@@ -4,7 +4,7 @@ from app.cliente_mysql import obtener_conexion
 from app.cliente_neo4j import ClienteNeo4j
 
 
-METADATA = {
+Datos_consultas= {
     "1":  {
         "titulo":      "Profesores con salario mayor al promedio de su departamento",
         "descripcion": "Muestra los profesores cuyo salario supera el promedio de su mismo departamento.",
@@ -48,7 +48,7 @@ METADATA = {
 }
 
 
-BASE = os.path.dirname(os.path.dirname(__file__))
+raiz = os.path.dirname(os.path.dirname(__file__))
 
 
 def _parsear_archivo(ruta, prefijo):
@@ -63,27 +63,27 @@ def _parsear_archivo(ruta, prefijo):
         match = re.search(r"Q(\d+)", bloque)
         if not match:
             continue
-        numero = match.group(1)
-        lineas_query = [
-            l for l in bloque.splitlines()
-            if not l.strip().startswith(prefijo)
-        ]
+        numero = str(int(match.group(1)))
+        lineas_query = []
+        for l in bloque.splitlines():
+            if not l.strip().startswith(prefijo):
+                lineas_query.append(l)
         resultado[numero] = "\n".join(lineas_query).strip()
 
     return resultado
 
 
 def _cargar_consultas():
-    ruta_sql    = os.path.join(BASE, "consultas", "consultas_sql.sql")
-    ruta_cypher = os.path.join(BASE, "consultas", "consultas_cypher.cypher")
+    ruta_sql    = os.path.join(raiz, "consultas", "consultas_sql.sql")
+    ruta_cypher = os.path.join(raiz, "consultas", "consultas_cypher.cypher")
 
     sqls    = _parsear_archivo(ruta_sql,    prefijo="--")
     cyphers = _parsear_archivo(ruta_cypher, prefijo="//")
 
     consultas = {}
-    for num, meta in METADATA.items():
+    for num, info_pregunta in Datos_consultas.items():
         consultas[num] = {
-            **meta,
+            **info_pregunta,
             "sql":    sqls.get(num,    "-- query no encontrada"),
             "cypher": cyphers.get(num, "// query no encontrada"),
         }
@@ -133,11 +133,6 @@ def ejecutar_consulta(opcion):
     filas_cypher = ejecutar_cypher(cliente, consulta["cypher"])
     mostrar_filas(filas_cypher)
     print(f"Total: {len(filas_cypher)} filas")
-
-    if len(filas_sql) == len(filas_cypher):
-        print("\n✔ Resultados consistentes")
-    else:
-        print("\n⚠ Diferencia en resultados")
 
     cliente.cerrar()
 
