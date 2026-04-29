@@ -134,6 +134,7 @@ SELECT sec.sec_id, c.title, cl.building
 FROM section sec
 JOIN course c ON sec.course_id = c.course_id
 JOIN classroom cl ON sec.building = cl.building
+                 AND sec.room_number = cl.room_number
 WHERE sec.year = 2009;
         """,
         "cypher": """
@@ -151,7 +152,11 @@ RETURN sec.sec_id, c.title, cl.building;
 SELECT s.name, c.title
 FROM takes t
 JOIN student s ON t.ID = s.ID
-JOIN course c ON t.course_id = c.course_id
+JOIN section sec ON t.course_id = sec.course_id
+                AND t.sec_id    = sec.sec_id
+                AND t.semester  = sec.semester
+                AND t.year      = sec.year
+JOIN course c ON sec.course_id = c.course_id
 WHERE t.grade <> 'F';
         """,
         "cypher": """
@@ -162,13 +167,16 @@ RETURN s.name, c.title;
     },
 
     "9": {
-        "titulo": "Profesores y estudiantes",
-        "descripcion": "Relación profesor-estudiante.",
+        "titulo": "Profesores y estudiantes que tuvieron en sus secciones",
+        "descripcion": "Relación profesor-estudiante a través de secciones.",
         "sql": """
 SELECT i.name, s.name
 FROM instructor i
 JOIN teaches t ON i.ID = t.ID
 JOIN takes tk ON t.course_id = tk.course_id
+             AND t.sec_id    = tk.sec_id
+             AND t.semester  = tk.semester
+             AND t.year      = tk.year
 JOIN student s ON tk.ID = s.ID;
         """,
         "cypher": """
@@ -179,19 +187,25 @@ RETURN i.name, s.name;
 
     "10": {
         "titulo": "Cursos nunca tomados",
-        "descripcion": "Cursos sin estudiantes.",
+        "descripcion": "Cursos sin estudiantes inscritos.",
         "sql": """
-SELECT c.title
+SELECT c.course_id, c.title
 FROM course c
-LEFT JOIN takes t ON c.course_id = t.course_id
-WHERE t.ID IS NULL;
+LEFT JOIN section sec ON c.course_id  = sec.course_id
+LEFT JOIN takes   t   ON sec.course_id = t.course_id
+                     AND sec.sec_id    = t.sec_id
+                     AND sec.semester  = t.semester
+                     AND sec.year      = t.year
+WHERE t.ID IS NULL
+ORDER BY c.course_id;
         """,
         "cypher": """
 MATCH (c:Course)
 WHERE NOT EXISTS {
     MATCH (c)<-[:ES_DE]-(sec:Section)<-[:TAKES]-(:Student)
 }
-RETURN c.title;
+RETURN c.course_id, c.title
+ORDER BY c.course_id;
         """,
     },
 }

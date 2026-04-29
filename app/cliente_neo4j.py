@@ -12,21 +12,21 @@ class ClienteNeo4j:
     def cerrar(self):
         self._driver.close()
 
-    def ejecutar_lectura(self, consulta, parametros):
+    def ejecutar_lectura(self, consulta, parametros=None):
         with self._driver.session(database=CONFIG_NEO4J["database"]) as sesion:
             resultado = sesion.run(consulta, parametros or {})
             return resultado.data()
-            
-    def ejecutar(self, consulta, parametros):
+
+    def ejecutar(self, consulta, parametros=None):
         return self.ejecutar_lectura(consulta, parametros)
 
-    def ejecutar_escritura(self, consulta, parametros):
+    def ejecutar_escritura(self, consulta, parametros=None):
         with self._driver.session(database=CONFIG_NEO4J["database"]) as sesion:
             sesion.execute_write(lambda tx: tx.run(consulta, parametros or {}))
 
     def limpiar_base(self):
         """Elimina todos los nodos y relaciones. Útil para repetir la migración."""
-        self.ejecutar_lectura("MATCH (n) DETACH DELETE n")
+        self.ejecutar_escritura("MATCH (n) DETACH DELETE n")
 
     def crear_restricciones(self):
         """Crea restricciones de unicidad para evitar nodos duplicados."""

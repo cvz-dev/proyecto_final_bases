@@ -121,8 +121,6 @@ ORDER BY i.name, s.name;
 -- ─────────────────────────────────────────────────────────────
 
 -- Q10 Cursos que nunca ha tomado nadie
---     LEFT JOIN desde course hacia takes pasando por section
---     Se necesita ir course → section → takes para llegar a los alumnos
 SELECT c.course_id, c.title
 FROM course c
 LEFT JOIN section sec ON c.course_id  = sec.course_id
