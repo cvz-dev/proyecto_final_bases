@@ -17,7 +17,7 @@ def main():
         from app.migraciones import ejecutar_migracion
         ejecutar_migracion(limpiar="--limpiar" in sys.argv or "--clear" in sys.argv)
 
-    elif comando in ["consultas", "comparar", "compare", "menu"]:
+    elif comando in ["consultas"]:
         from app.ejecutor_consultas import mostrar_menu_consultas
         mostrar_menu_consultas()
 

@@ -8,7 +8,6 @@ GROUP BY i.ID, i.name, i.salary, i.dept_name
 HAVING i.salary > AVG(i2.salary)
 ORDER BY i.dept_name, i.salary DESC;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q02 Departamentos con número de profesores, promedio de salario
 SELECT d.dept_name, d.budget,
@@ -20,7 +19,6 @@ JOIN instructor i ON d.dept_name = i.dept_name
 GROUP BY d.dept_name, d.budget
 ORDER BY budget_por_profesor DESC;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q03 Profesores que impartieron más de una sección en el mismo semestre
 SELECT i.name, t.semester, t.year,
@@ -31,7 +29,6 @@ GROUP BY i.ID, i.name, t.semester, t.year
 HAVING COUNT(*) > 1
 ORDER BY t.year DESC, secciones_en_semestre DESC;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q04 Cursos con prerrequisitos
 SELECT c.course_id AS curso_id,
@@ -44,7 +41,6 @@ JOIN prereq pr ON c.course_id = pr.course_id
 JOIN course p ON pr.prereq_id = p.course_id
 ORDER BY c.course_id;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q05 Departamentos sin profesores con presupuesto mayor a 50,000
 SELECT d.dept_name, d.budget, d.building
@@ -54,7 +50,6 @@ WHERE i.ID IS NULL
   AND d.budget > 50000
 ORDER BY d.budget DESC;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q06 Estudiantes con su asesor y el departamento del asesor
 SELECT s.name    AS estudiante,
@@ -68,7 +63,6 @@ JOIN instructor i ON a.i_ID      = i.ID
 JOIN department d ON i.dept_name = d.dept_name
 ORDER BY d.dept_name, i.name;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q07 Secciones del año 2009 con nombre del curso y capacidad del aula
 SELECT sec.sec_id, sec.semester, sec.year,
@@ -84,7 +78,6 @@ JOIN classroom cl ON sec.building    = cl.building
 WHERE sec.year = 2009
 ORDER BY c.title, sec.semester;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q08 Cursos aprobados por estudiante
 SELECT s.name AS estudiante,
@@ -104,7 +97,6 @@ WHERE t.grade IS NOT NULL
   AND t.grade <> 'F'
 ORDER BY s.name, t.year;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q09 Profesores que comparten estudiantes
 SELECT i.name AS profesor,
@@ -118,7 +110,6 @@ JOIN takes tk ON t.course_id = tk.course_id
 JOIN student s ON tk.ID = s.ID
 ORDER BY i.name, s.name;
 
--- ─────────────────────────────────────────────────────────────
 
 -- Q10 Cursos que nunca ha tomado nadie
 SELECT c.course_id, c.title

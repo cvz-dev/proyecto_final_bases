@@ -258,11 +258,6 @@ def ejecutar_consulta(opcion):
     mostrar_filas(filas_cypher)
     print(f"Total Cypher: {len(filas_cypher)}")
 
-    if len(filas_sql) == len(filas_cypher):
-        print("\n✔ Resultados consistentes")
-    else:
-        print("\n⚠ Diferencia en resultados")
-
     cliente.cerrar()
 
 
@@ -282,4 +277,3 @@ def mostrar_menu_consultas():
             continue
 
         ejecutar_consulta(opcion)
-        input("\nEnter para continuar...")

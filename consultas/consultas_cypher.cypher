@@ -7,7 +7,6 @@ RETURN i.name, i.salary, d.dept_name,
        round(promedio_depto, 2) AS promedio_depto
 ORDER BY d.dept_name, i.salary DESC;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q02 Departamentos con número de profesores, promedio de salario y presupuesto por profesor
 MATCH (d:Department)<-[:PERTENECE_A]-(i:Instructor)
@@ -19,7 +18,6 @@ RETURN depto, budget, num_profesores,
        round(toFloat(budget) / num_profesores, 2) AS budget_por_profesor
 ORDER BY budget_por_profesor DESC;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q03 Profesores que impartieron más de una sección en el mismo semestre
 MATCH (i:Instructor)-[:TEACHES]->(sec:Section)
@@ -29,7 +27,6 @@ WHERE secciones_en_semestre > 1
 RETURN i.name, semester, year, secciones_en_semestre
 ORDER BY year DESC, secciones_en_semestre DESC;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q04 Cursos con sus prerrequisitos
 MATCH (c:Course)-[:REQUIERE]->(p:Course)
@@ -40,7 +37,6 @@ RETURN c.course_id AS curso_id,
        p.credits   AS prereq_creditos
 ORDER BY curso_id;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q05 Departamentos sin profesores con presupuesto mayor a 50,000
 MATCH (d:Department)
@@ -49,7 +45,6 @@ WHERE NOT (:Instructor)-[:PERTENECE_A]->(d)
 RETURN d.dept_name, d.budget, d.building
 ORDER BY d.budget DESC;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q06 Estudiantes con su asesor y el departamento del asesor
 MATCH (i:Instructor)-[:ADVISES]->(s:Student),
@@ -61,7 +56,6 @@ RETURN s.name     AS estudiante,
        d.dept_name
 ORDER BY d.dept_name, i.name;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q07 Secciones del año 2009 con nombre del curso y capacidad del aula
 MATCH (sec:Section)-[:ES_DE]->(c:Course),
@@ -75,7 +69,6 @@ RETURN sec.sec_id, sec.semester, sec.year,
        cl.capacity
 ORDER BY c.title, sec.semester;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q08 Cursos aprobados por estudiante
 MATCH (s:Student)-[t:TAKES]->(sec:Section)-[:ES_DE]->(c:Course)
@@ -89,7 +82,6 @@ RETURN s.name      AS estudiante,
        t.grade     AS calificacion
 ORDER BY estudiante, anio;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q09 Profesores y estudiantes que tuvieron en sus secciones
 MATCH (i:Instructor)-[:TEACHES]->(sec:Section)<-[:TAKES]-(s:Student)
@@ -97,7 +89,6 @@ RETURN i.name AS profesor,
        s.name AS estudiante
 ORDER BY profesor, estudiante;
 
-// ─────────────────────────────────────────────────────────────
 
 // Q10 Cursos que nunca ha tomado nadie
 MATCH (c:Course)

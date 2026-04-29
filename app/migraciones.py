@@ -91,7 +91,7 @@ def migrar_nodos(cliente: ClienteNeo4j):
             fila,
         )
 
-    print("Termindo")
+    print("Terminado")
 
 
 def migrar_relaciones(cliente: ClienteNeo4j):
@@ -168,7 +168,7 @@ def ejecutar_migracion(limpiar: bool = False):
     cliente = ClienteNeo4j()
     try:
         if limpiar:
-            print("► Limpiando base de datos Neo4j...")
+            print("Se limpia la base de datos")
             cliente.limpiar_base()
         cliente.crear_restricciones()
         migrar_nodos(cliente)
