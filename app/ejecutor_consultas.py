@@ -1,214 +1,96 @@
+import re
+import os
 from app.cliente_mysql import obtener_conexion
 from app.cliente_neo4j import ClienteNeo4j
 
 
-CONSULTAS = {
-    "1": {
-        "titulo": "Profesores con salario mayor al promedio de su departamento",
-        "descripcion": "Muestra los profesores cuyo salario supera el salario promedio de su mismo departamento.",
-        "sql": """
-SELECT i.name AS profesor,
-       i.salary AS salario,
-       i.dept_name AS departamento,
-       ROUND(AVG(i2.salary), 2) AS promedio_depto
-FROM instructor i
-JOIN department d  ON i.dept_name  = d.dept_name
-JOIN instructor i2 ON i2.dept_name = i.dept_name
-GROUP BY i.ID, i.name, i.salary, i.dept_name
-HAVING i.salary > AVG(i2.salary)
-ORDER BY i.dept_name, i.salary DESC;
-        """,
-        "cypher": """
-MATCH (i:Instructor)-[:PERTENECE_A]->(d:Department)
-WITH d, avg(toFloat(i.salary)) AS promedio_depto
-MATCH (i:Instructor)-[:PERTENECE_A]->(d)
-WHERE toFloat(i.salary) > promedio_depto
-RETURN i.name AS profesor,
-       i.salary AS salario,
-       d.dept_name AS departamento,
-       round(promedio_depto, 2) AS promedio_depto
-ORDER BY departamento, salario DESC;
-        """,
+METADATA = {
+    "1":  {
+        "titulo":      "Profesores con salario mayor al promedio de su departamento",
+        "descripcion": "Muestra los profesores cuyo salario supera el promedio de su mismo departamento.",
     },
-
-    "2": {
-        "titulo": "Departamentos con profesores, salario promedio y presupuesto por profesor",
-        "descripcion": "Calcula métricas por departamento.",
-        "sql": """
-SELECT d.dept_name AS departamento,
-       d.budget AS presupuesto,
-       COUNT(i.ID) AS num_profesores,
-       ROUND(AVG(i.salary), 2) AS promedio_salario,
-       ROUND(d.budget / COUNT(i.ID), 2) AS presupuesto_por_profesor
-FROM department d
-JOIN instructor i ON d.dept_name = i.dept_name
-GROUP BY d.dept_name, d.budget
-ORDER BY presupuesto_por_profesor DESC;
-        """,
-        "cypher": """
-MATCH (d:Department)<-[:PERTENECE_A]-(i:Instructor)
-WITH d,
-     count(i) AS num_profesores,
-     avg(toFloat(i.salary)) AS promedio_salario
-RETURN d.dept_name AS departamento,
-       d.budget AS presupuesto,
-       num_profesores,
-       round(promedio_salario, 2) AS promedio_salario,
-       round(toFloat(d.budget) / num_profesores, 2) AS presupuesto_por_profesor
-ORDER BY presupuesto_por_profesor DESC;
-        """,
+    "2":  {
+        "titulo":      "Departamentos con profesores, salario promedio y presupuesto por profesor",
+        "descripcion": "Calcula métricas agregadas por departamento.",
     },
-
-    "3": {
-        "titulo": "Profesores con más de una sección en un semestre",
+    "3":  {
+        "titulo":      "Profesores con más de una sección en un semestre",
         "descripcion": "Identifica profesores con múltiples secciones en el mismo periodo.",
-        "sql": """
-SELECT i.name AS profesor,
-       t.semester AS semestre,
-       t.year AS anio,
-       COUNT(*) AS secciones
-FROM teaches t
-JOIN instructor i ON t.ID = i.ID
-GROUP BY i.ID, i.name, t.semester, t.year
-HAVING COUNT(*) > 1;
-        """,
-        "cypher": """
-MATCH (i:Instructor)-[:TEACHES]->(sec:Section)
-WITH i, sec.semester AS semestre, sec.year AS anio, count(sec) AS secciones
-WHERE secciones > 1
-RETURN i.name AS profesor, semestre, anio, secciones;
-        """,
     },
-
-    "4": {
-        "titulo": "Cursos con prerrequisitos",
-        "descripcion": "Cursos que requieren otros cursos.",
-        "sql": """
-SELECT c.course_id, c.title, p.title AS prereq
-FROM course c
-JOIN prereq pr ON c.course_id = pr.course_id
-JOIN course p ON pr.prereq_id = p.course_id;
-        """,
-        "cypher": """
-MATCH (c:Course)-[:REQUIERE]->(p:Course)
-RETURN c.title AS curso, p.title AS prerequisito;
-        """,
+    "4":  {
+        "titulo":      "Cursos con prerrequisitos",
+        "descripcion": "Cursos que requieren haber cursado otro antes.",
     },
-
-    "5": {
-        "titulo": "Departamentos sin profesores",
-        "descripcion": "Departamentos sin instructores asociados.",
-        "sql": """
-SELECT d.dept_name
-FROM department d
-LEFT JOIN instructor i ON d.dept_name = i.dept_name
-WHERE i.ID IS NULL;
-        """,
-        "cypher": """
-MATCH (d:Department)
-WHERE NOT (:Instructor)-[:PERTENECE_A]->(d)
-RETURN d.dept_name;
-        """,
+    "5":  {
+        "titulo":      "Departamentos sin profesores",
+        "descripcion": "Departamentos que no tienen instructores asociados.",
     },
-
-    "6": {
-        "titulo": "Estudiantes y su asesor",
-        "descripcion": "Muestra estudiantes con su asesor.",
-        "sql": """
-SELECT s.name, i.name AS asesor
-FROM advisor a
-JOIN student s ON a.s_ID = s.ID
-JOIN instructor i ON a.i_ID = i.ID;
-        """,
-        "cypher": """
-MATCH (i:Instructor)-[:ADVISES]->(s:Student)
-RETURN s.name, i.name AS asesor;
-        """,
+    "6":  {
+        "titulo":      "Estudiantes con su asesor y departamento del asesor",
+        "descripcion": "Muestra la relación asesor-estudiante incluyendo el departamento.",
     },
-
-    "7": {
-        "titulo": "Secciones 2009 con aula",
-        "descripcion": "Secciones impartidas en 2009 con su aula.",
-        "sql": """
-SELECT sec.sec_id, c.title, cl.building
-FROM section sec
-JOIN course c ON sec.course_id = c.course_id
-JOIN classroom cl ON sec.building = cl.building
-                 AND sec.room_number = cl.room_number
-WHERE sec.year = 2009;
-        """,
-        "cypher": """
-MATCH (sec:Section)-[:ES_DE]->(c:Course),
-      (sec)-[:SE_IMPARTE_EN]->(cl:Classroom)
-WHERE sec.year = 2009
-RETURN sec.sec_id, c.title, cl.building;
-        """,
+    "7":  {
+        "titulo":      "Secciones 2009 con nombre del curso y aula",
+        "descripcion": "Secciones impartidas en 2009 junto con su curso y salón.",
     },
-
-    "8": {
-        "titulo": "Cursos aprobados por estudiante",
+    "8":  {
+        "titulo":      "Cursos aprobados por estudiante",
         "descripcion": "Cursos donde la calificación no es F.",
-        "sql": """
-SELECT s.name, c.title
-FROM takes t
-JOIN student s ON t.ID = s.ID
-JOIN section sec ON t.course_id = sec.course_id
-                AND t.sec_id    = sec.sec_id
-                AND t.semester  = sec.semester
-                AND t.year      = sec.year
-JOIN course c ON sec.course_id = c.course_id
-WHERE t.grade <> 'F';
-        """,
-        "cypher": """
-MATCH (s:Student)-[t:TAKES]->(sec:Section)-[:ES_DE]->(c:Course)
-WHERE t.grade <> 'F'
-RETURN s.name, c.title;
-        """,
     },
-
-    "9": {
-        "titulo": "Profesores y estudiantes que tuvieron en sus secciones",
-        "descripcion": "Relación profesor-estudiante a través de secciones.",
-        "sql": """
-SELECT i.name, s.name
-FROM instructor i
-JOIN teaches t ON i.ID = t.ID
-JOIN takes tk ON t.course_id = tk.course_id
-             AND t.sec_id    = tk.sec_id
-             AND t.semester  = tk.semester
-             AND t.year      = tk.year
-JOIN student s ON tk.ID = s.ID;
-        """,
-        "cypher": """
-MATCH (i:Instructor)-[:TEACHES]->(sec:Section)<-[:TAKES]-(s:Student)
-RETURN i.name, s.name;
-        """,
+    "9":  {
+        "titulo":      "Profesores y estudiantes que tuvieron en sus secciones",
+        "descripcion": "Relación profesor-estudiante a través de secciones compartidas.",
     },
-
     "10": {
-        "titulo": "Cursos nunca tomados",
-        "descripcion": "Cursos sin estudiantes inscritos.",
-        "sql": """
-SELECT c.course_id, c.title
-FROM course c
-LEFT JOIN section sec ON c.course_id  = sec.course_id
-LEFT JOIN takes   t   ON sec.course_id = t.course_id
-                     AND sec.sec_id    = t.sec_id
-                     AND sec.semester  = t.semester
-                     AND sec.year      = t.year
-WHERE t.ID IS NULL
-ORDER BY c.course_id;
-        """,
-        "cypher": """
-MATCH (c:Course)
-WHERE NOT EXISTS {
-    MATCH (c)<-[:ES_DE]-(sec:Section)<-[:TAKES]-(:Student)
-}
-RETURN c.course_id, c.title
-ORDER BY c.course_id;
-        """,
+        "titulo":      "Cursos que nunca ha tomado nadie",
+        "descripcion": "Cursos sin ningún estudiante inscrito.",
     },
 }
+
+
+BASE = os.path.dirname(os.path.dirname(__file__))
+
+
+def _parsear_archivo(ruta, prefijo):
+    with open(ruta, encoding="utf-8") as f:
+        contenido = f.read()
+
+    resultado = {}
+    for bloque in contenido.split("\n\n"):
+        bloque = bloque.strip()
+        if not bloque:
+            continue
+        match = re.search(r"Q(\d+)", bloque)
+        if not match:
+            continue
+        numero = match.group(1)
+        lineas_query = [
+            l for l in bloque.splitlines()
+            if not l.strip().startswith(prefijo)
+        ]
+        resultado[numero] = "\n".join(lineas_query).strip()
+
+    return resultado
+
+
+def _cargar_consultas():
+    ruta_sql    = os.path.join(BASE, "consultas", "consultas_sql.sql")
+    ruta_cypher = os.path.join(BASE, "consultas", "consultas_cypher.cypher")
+
+    sqls    = _parsear_archivo(ruta_sql,    prefijo="--")
+    cyphers = _parsear_archivo(ruta_cypher, prefijo="//")
+
+    consultas = {}
+    for num, meta in METADATA.items():
+        consultas[num] = {
+            **meta,
+            "sql":    sqls.get(num,    "-- query no encontrada"),
+            "cypher": cyphers.get(num, "// query no encontrada"),
+        }
+    return consultas
+
+
+CONSULTAS = _cargar_consultas()
 
 
 def ejecutar_sql(consulta_sql):
@@ -240,23 +122,22 @@ def ejecutar_consulta(opcion):
     print("\n" + "=" * 60)
     print(consulta["titulo"])
     print("=" * 60)
+    print(f"\n{consulta['descripcion']}\n")
 
-    print("\nDescripción:")
-    print(consulta["descripcion"])
-
-    print("\nSQL:")
-    print(consulta["sql"])
+    print("── SQL " + "─" * 54)
     filas_sql = ejecutar_sql(consulta["sql"])
-    print("\nResultado SQL:")
     mostrar_filas(filas_sql)
-    print(f"Total SQL: {len(filas_sql)}")
+    print(f"Total: {len(filas_sql)} filas")
 
-    print("\nCypher:")
-    print(consulta["cypher"])
+    print("\n── Cypher " + "─" * 50)
     filas_cypher = ejecutar_cypher(cliente, consulta["cypher"])
-    print("\nResultado Cypher:")
     mostrar_filas(filas_cypher)
-    print(f"Total Cypher: {len(filas_cypher)}")
+    print(f"Total: {len(filas_cypher)} filas")
+
+    if len(filas_sql) == len(filas_cypher):
+        print("\n✔ Resultados consistentes")
+    else:
+        print("\n⚠ Diferencia en resultados")
 
     cliente.cerrar()
 
@@ -265,10 +146,10 @@ def mostrar_menu_consultas():
     while True:
         print("\n=== MENÚ ===")
         for k, v in CONSULTAS.items():
-            print(f"{k}. {v['titulo']}")
-        print("0. Salir")
+            print(f"  {k}. {v['titulo']}")
+        print("  0. Salir")
 
-        opcion = input("Opción: ")
+        opcion = input("\nOpción: ").strip()
 
         if opcion == "0":
             break
