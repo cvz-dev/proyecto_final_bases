@@ -12,15 +12,15 @@ class ClienteNeo4j:
     def cerrar(self):
         self._driver.close()
 
-    def ejecutar_lectura(self, consulta: str, parametros: dict = None):
+    def ejecutar_lectura(self, consulta, parametros):
         with self._driver.session(database=CONFIG_NEO4J["database"]) as sesion:
             resultado = sesion.run(consulta, parametros or {})
             return resultado.data()
             
-    def ejecutar(self, consulta: str, parametros: dict = None):
+    def ejecutar(self, consulta, parametros):
         return self.ejecutar_lectura(consulta, parametros)
 
-    def ejecutar_escritura(self, consulta: str, parametros: dict = None):
+    def ejecutar_escritura(self, consulta, parametros):
         with self._driver.session(database=CONFIG_NEO4J["database"]) as sesion:
             sesion.execute_write(lambda tx: tx.run(consulta, parametros or {}))
 
