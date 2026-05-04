@@ -78,9 +78,9 @@ RETURN s.name      AS estudiante,
        c.title     AS curso,
        c.credits   AS creditos,
        sec.semester AS semestre,
-       sec.year    AS anio,
+       sec.year    AS año,
        t.grade     AS calificacion
-ORDER BY estudiante, anio;
+ORDER BY estudiante, año;
 
 
 // Q09 Profesores y estudiantes que tuvieron en sus secciones
