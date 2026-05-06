@@ -26,7 +26,7 @@ ORDER BY presupuesto_restante ASC;
 
 -- Q03 Profesores que impartieron secciones en Fall y Spring del mismo año
 SELECT i.name AS profesor,
-       t1.year AS anio,
+       t1.year AS año,
        COUNT(DISTINCT t1.course_id) AS cursos_fall,
        COUNT(DISTINCT t2.course_id) AS cursos_spring
 FROM instructor i
