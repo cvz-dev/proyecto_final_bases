@@ -1,99 +1,134 @@
-// Q01 Profesores cuyo salario supera el promedio de su departamento
+// Q01 Profesores que superan el promedio de su depto Y el promedio global
+MATCH (todos:Instructor)
+WITH avg(toFloat(todos.salary)) AS promedio_global
 MATCH (i:Instructor)-[:PERTENECE_A]->(d:Department)
-WITH d, avg(toFloat(i.salary)) AS promedio_depto
-MATCH (i:Instructor)-[:PERTENECE_A]->(d)
+WITH d, i, promedio_global, avg(toFloat(i.salary)) AS promedio_depto
+MATCH (i)-[:PERTENECE_A]->(d)
 WHERE toFloat(i.salary) > promedio_depto
-RETURN i.name, i.salary, d.dept_name,
-       round(promedio_depto, 2) AS promedio_depto
+  AND toFloat(i.salary) > promedio_global
+RETURN i.name,
+       i.salary,
+       d.dept_name,
+       promedio_depto,
+       promedio_global
 ORDER BY d.dept_name, i.salary DESC;
 
 
-// Q02 Departamentos con número de profesores, promedio de salario y presupuesto por profesor
-MATCH (d:Department)<-[:PERTENECE_A]-(i:Instructor)
-WITH d.dept_name AS depto, d.budget AS budget,
+// Q02 Presupuesto restante por departamento tras pagar salarios
+MATCH (i:Instructor)-[:PERTENECE_A]->(d:Department)
+WITH d,
      count(i)               AS num_profesores,
-     avg(toFloat(i.salary)) AS avg_salary
-RETURN depto, budget, num_profesores,
-       round(avg_salary, 2)                       AS avg_salary,
-       round(toFloat(budget) / num_profesores, 2) AS budget_por_profesor
-ORDER BY budget_por_profesor DESC;
+     sum(toFloat(i.salary)) AS masa_salarial
+RETURN d.dept_name,
+       d.budget,
+       num_profesores,
+       masa_salarial,
+       toFloat(d.budget) - masa_salarial AS presupuesto_restante
+ORDER BY presupuesto_restante ASC;
 
 
-// Q03 Profesores que impartieron más de una sección en el mismo semestre
-MATCH (i:Instructor)-[:TEACHES]->(sec:Section)
-WITH i, sec.semester AS semester, sec.year AS year,
-     count(sec) AS secciones_en_semestre
-WHERE secciones_en_semestre > 1
-RETURN i.name, semester, year, secciones_en_semestre
-ORDER BY year DESC, secciones_en_semestre DESC;
+// Q03 Profesores que impartieron secciones en Fall y Spring del mismo año
+MATCH (i:Instructor)-[:TEACHES]->(sf:Section {semester: 'Fall'})
+MATCH (i)-[:TEACHES]->(sp:Section {semester: 'Spring'})
+WHERE sf.year = sp.year
+WITH i, sf.year AS año,
+     count(DISTINCT sf.course_id) AS cursos_fall,
+     count(DISTINCT sp.course_id) AS cursos_spring
+RETURN i.name AS profesor, año, cursos_fall, cursos_spring
+ORDER BY año DESC, profesor;
 
 
-// Q04 Cursos con sus prerrequisitos
-MATCH (c:Course)-[:REQUIERE]->(p:Course)
-RETURN c.course_id AS curso_id,
-       c.title     AS curso,
-       p.course_id AS prereq_id,
-       p.title     AS prereq_titulo,
-       p.credits   AS prereq_creditos
-ORDER BY curso_id;
+// Q04 Estudiantes que han tomado cursos de más de un departamento
+MATCH (s:Student)-[:TAKES]->(sec:Section)-[:ES_DE]->(c:Course)-[:PERTENECE_A]->(d:Department)
+WITH s, count(DISTINCT d) AS deptos_distintos,
+        count(DISTINCT c) AS total_cursos
+WHERE deptos_distintos > 1
+RETURN s.name      AS estudiante,
+       s.dept_name AS depto_estudiante,
+       deptos_distintos,
+       total_cursos
+ORDER BY deptos_distintos DESC, total_cursos DESC;
 
 
-// Q05 Departamentos sin profesores con presupuesto mayor a 50,000
+// Q05 Departamentos sin profesores cuyo presupuesto supera el promedio
+MATCH (todos:Department)
+WITH avg(toFloat(todos.budget)) AS promedio_presupuesto
 MATCH (d:Department)
 WHERE NOT (:Instructor)-[:PERTENECE_A]->(d)
-  AND toFloat(d.budget) > 50000
-RETURN d.dept_name, d.budget, d.building
+  AND toFloat(d.budget) > promedio_presupuesto
+RETURN d.dept_name,
+       d.budget,
+       d.building,
+       toFloat(d.budget) - promedio_presupuesto AS exceso_vs_promedio
 ORDER BY d.budget DESC;
 
 
-// Q06 Estudiantes con su asesor y el departamento del asesor
+// Q06 Estudiantes cuyo asesor pertenece a un departamento distinto al suyo
 MATCH (i:Instructor)-[:ADVISES]->(s:Student),
       (i)-[:PERTENECE_A]->(d:Department)
-RETURN s.name     AS estudiante,
+WHERE i.dept_name <> s.dept_name
+RETURN s.name      AS estudiante,
+       s.dept_name AS depto_estudiante,
        s.tot_cred,
-       i.name     AS asesor,
-       i.salary   AS salario_asesor,
-       d.dept_name
-ORDER BY d.dept_name, i.name;
+       i.name      AS asesor,
+       i.dept_name AS depto_asesor,
+       d.budget    AS presupuesto_depto_asesor
+ORDER BY s.dept_name, i.dept_name;
 
 
-// Q07 Secciones del año 2009 con nombre del curso y capacidad del aula
+// Q07 Lugares disponibles por sección (capacidad - inscritos)
 MATCH (sec:Section)-[:ES_DE]->(c:Course),
       (sec)-[:SE_IMPARTE_EN]->(cl:Classroom)
-WHERE sec.year = 2009
-RETURN sec.sec_id, sec.semester, sec.year,
-       c.title  AS curso,
-       c.credits,
+OPTIONAL MATCH (s:Student)-[:TAKES]->(sec)
+WITH c, sec, cl, count(s) AS inscritos
+RETURN c.title     AS curso,
+       sec.sec_id,
+       sec.semester,
+       sec.year,
        cl.building,
        cl.room_number,
-       cl.capacity
-ORDER BY c.title, sec.semester;
+       cl.capacity,
+       inscritos,
+       toInteger(cl.capacity) - inscritos AS lugares_disponibles
+ORDER BY lugares_disponibles ASC;
 
 
-// Q08 Cursos aprobados por estudiante
-MATCH (s:Student)-[t:TAKES]->(sec:Section)-[:ES_DE]->(c:Course)
-WHERE t.grade IS NOT NULL
-  AND t.grade <> 'F'
+// Q08 Estudiantes que tomaron más cursos que el promedio de su departamento
+MATCH (s:Student)-[:TAKES]->(:Section)
+WITH s.dept_name AS depto, avg(count(*)) AS promedio_depto
+MATCH (s:Student)-[:TAKES]->(:Section)
+WHERE s.dept_name = depto
+WITH s, depto, promedio_depto, count(*) AS cursos_tomados
+WHERE cursos_tomados > promedio_depto
 RETURN s.name      AS estudiante,
-       c.title     AS curso,
-       c.credits   AS creditos,
-       sec.semester AS semestre,
-       sec.year    AS año,
-       t.grade     AS calificacion
-ORDER BY estudiante, año;
+       s.dept_name AS depto_estudiante,
+       cursos_tomados,
+       promedio_depto
+ORDER BY depto_estudiante, cursos_tomados DESC;
 
 
-// Q09 Profesores y estudiantes que tuvieron en sus secciones
-MATCH (i:Instructor)-[:TEACHES]->(sec:Section)<-[:TAKES]-(s:Student)
-RETURN i.name AS profesor,
-       s.name AS estudiante
-ORDER BY profesor, estudiante;
+// Q09 Pares de profesores con 2 o más estudiantes compartidos
+MATCH (i1:Instructor)-[:TEACHES]->(sec1:Section)<-[:TAKES]-(s:Student)
+      -[:TAKES]->(sec2:Section)<-[:TEACHES]-(i2:Instructor)
+WHERE i1.ID < i2.ID
+WITH i1, i2, count(DISTINCT s) AS estudiantes_compartidos
+WHERE estudiantes_compartidos >= 2
+RETURN i1.name AS profesor_1,
+       i2.name AS profesor_2,
+       estudiantes_compartidos
+ORDER BY estudiantes_compartidos DESC;
 
 
-// Q10 Cursos que nunca ha tomado nadie
-MATCH (c:Course)
-WHERE NOT EXISTS {
-    MATCH (c)<-[:ES_DE]-(sec:Section)<-[:TAKES]-(:Student)
-}
-RETURN c.course_id, c.title
-ORDER BY c.course_id;
+// Q10 Estudiantes que reprobaron más cursos que el promedio
+MATCH (s:Student)-[t:TAKES]->(:Section)
+WHERE t.grade = 'F'
+WITH s.dept_name AS depto, avg(count(t)) AS promedio_reprobados
+MATCH (s:Student)-[t:TAKES]->(:Section)
+WHERE t.grade = 'F' AND s.dept_name = depto
+WITH s, depto, promedio_reprobados, count(t) AS cursos_reprobados
+WHERE cursos_reprobados > promedio_reprobados
+RETURN s.name      AS estudiante,
+       s.dept_name,
+       cursos_reprobados,
+       promedio_reprobados
+ORDER BY cursos_reprobados DESC;
