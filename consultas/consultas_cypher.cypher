@@ -124,10 +124,11 @@ ORDER BY estudiantes_compartidos DESC;
 // Q10 Estudiantes con mas C'(Calificación) que el promedio
 MATCH (s:Student)-[t:TAKES]->(:Section)
 WHERE t.grade STARTS WITH 'C'
-WITH s.dept_name AS depto, avg(count(t)) AS promedio
+WITH s, count(t) AS conteo
+WITH avg(toFloat(conteo)) AS promedio
 MATCH (s:Student)-[t:TAKES]->(:Section)
-WHERE t.grade STARTS WITH 'C' AND s.dept_name = depto
-WITH s, depto, promedio, count(t) AS cursos_con_c
+WHERE t.grade STARTS WITH 'C'
+WITH s, count(t) AS cursos_con_c, promedio
 WHERE cursos_con_c > promedio
 RETURN s.name      AS estudiante,
        s.dept_name,
