@@ -58,7 +58,7 @@ ORDER BY deptos_distintos DESC, total_cursos DESC;
 SELECT d.dept_name,
        d.budget,
        d.building,
-       d.budget - (SELECT AVG(budget) FROM department) AS exceso_vs_promedio
+       d.budget - (SELECT AVG(budget) FROM department) AS presupuesto_restante
 FROM department d
 LEFT JOIN instructor i ON d.dept_name = i.dept_name
 WHERE i.ID IS NULL
@@ -90,7 +90,7 @@ SELECT c.title        AS curso,
        cl.room_number,
        cl.capacity,
        COUNT(t.ID)               AS inscritos,
-       cl.capacity - COUNT(t.ID) AS lugares_disponibles
+       cl.capacity -q COUNT(t.ID) AS lugares_disponibles
 FROM section   sec
 JOIN course    c  ON sec.course_id   = c.course_id
 JOIN classroom cl ON sec.building    = cl.building
