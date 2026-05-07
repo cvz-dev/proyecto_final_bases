@@ -2,10 +2,9 @@
 MATCH (todos:Instructor)
 WITH avg(toFloat(todos.salary)) AS promedio_global
 MATCH (i:Instructor)-[:PERTENECE_A]->(d:Department)
-WITH d, promedio_global,
-     avg(toFloat(i.salary)) AS promedio_depto,
-     collect(i) AS profs
-UNWIND profs AS i
+WITH i, d, promedio_global
+MATCH (peer:Instructor)-[:PERTENECE_A]->(d)
+WITH i, d, promedio_global, avg(toFloat(peer.salary)) AS promedio_depto
 WHERE toFloat(i.salary) > promedio_depto
   AND toFloat(i.salary) > promedio_global
 RETURN i.name,
