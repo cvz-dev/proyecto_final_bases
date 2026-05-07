@@ -121,17 +121,16 @@ RETURN i1.name AS profesor_1,
 ORDER BY estudiantes_compartidos DESC;
 
 
-// Q10 Estudiantes que reprobaron más cursos que el promedio
-MATCH (s2:Student)-[t2:TAKES]->(:Section)
-WHERE t2.grade = 'F'
-WITH s2, count(t2) AS conteo
-WITH avg(toFloat(conteo)) AS promedio_reprobados
+// Q10 Estudiantes con mas C'(Calificación) que el promedio
 MATCH (s:Student)-[t:TAKES]->(:Section)
-WHERE t.grade = 'F'
-WITH s, count(t) AS cursos_reprobados, promedio_reprobados
-WHERE cursos_reprobados > promedio_reprobados
+WHERE t.grade STARTS WITH 'C'
+WITH s.dept_name AS depto, avg(count(t)) AS promedio
+MATCH (s:Student)-[t:TAKES]->(:Section)
+WHERE t.grade STARTS WITH 'C' AND s.dept_name = depto
+WITH s, depto, promedio, count(t) AS cursos_con_c
+WHERE cursos_con_c > promedio
 RETURN s.name      AS estudiante,
        s.dept_name,
-       cursos_reprobados,
-       promedio_reprobados
-ORDER BY cursos_reprobados DESC;
+       cursos_con_c,
+       promedio
+ORDER BY cursos_con_c DESC;

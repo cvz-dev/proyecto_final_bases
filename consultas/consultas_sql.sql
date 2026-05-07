@@ -156,29 +156,29 @@ HAVING COUNT(DISTINCT s.ID) >= 2
 ORDER BY estudiantes_compartidos DESC;
 
 
--- Q10 Estudiantes que reprobaron más cursos que el promedio
+-- Q10 Estudiantes con mas C'(Calificación) que el promedio
 SELECT s.name       AS estudiante,
        s.dept_name,
-       COUNT(t.course_id) AS cursos_reprobados,
+       COUNT(t.course_id) AS cursos_con_c,
        (SELECT AVG(conteo)
         FROM (
             SELECT COUNT(t2.course_id) AS conteo
             FROM takes t2
-            WHERE t2.grade = 'F'
+            WHERE t2.grade LIKE 'C%'
             GROUP BY t2.ID
         ) sub
-       ) AS promedio_reprobados
+       ) AS promedio
 FROM student s
 JOIN takes t ON s.ID = t.ID
-WHERE t.grade = 'F'
+WHERE t.grade LIKE 'C%'
 GROUP BY s.ID, s.name, s.dept_name
 HAVING COUNT(t.course_id) > (
     SELECT AVG(conteo)
     FROM (
         SELECT COUNT(t2.course_id) AS conteo
         FROM takes t2
-        WHERE t2.grade = 'F'
+        WHERE t2.grade LIKE 'C%'
         GROUP BY t2.ID
     ) sub
 )
-ORDER BY cursos_reprobados DESC;
+ORDER BY cursos_con_c DESC;
