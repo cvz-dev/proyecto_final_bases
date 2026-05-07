@@ -2,8 +2,10 @@
 MATCH (todos:Instructor)
 WITH avg(toFloat(todos.salary)) AS promedio_global
 MATCH (i:Instructor)-[:PERTENECE_A]->(d:Department)
-WITH d, i, promedio_global, avg(toFloat(i.salary)) AS promedio_depto
-MATCH (i)-[:PERTENECE_A]->(d)
+WITH d, promedio_global,
+     avg(toFloat(i.salary)) AS promedio_depto,
+     collect(i) AS profs
+UNWIND profs AS i
 WHERE toFloat(i.salary) > promedio_depto
   AND toFloat(i.salary) > promedio_global
 RETURN i.name,
@@ -95,10 +97,11 @@ ORDER BY lugares_disponibles ASC;
 
 // Q08 Estudiantes que tomaron más cursos que el promedio de su departamento
 MATCH (s:Student)-[:TAKES]->(:Section)
-WITH s.dept_name AS depto, avg(count(*)) AS promedio_depto
-MATCH (s:Student)-[:TAKES]->(:Section)
-WHERE s.dept_name = depto
-WITH s, depto, promedio_depto, count(*) AS cursos_tomados
+WITH s, count(*) AS cursos_tomados
+MATCH (peer:Student)-[:TAKES]->(:Section)
+WHERE peer.dept_name = s.dept_name
+WITH s, cursos_tomados, peer, count(*) AS c_peer
+WITH s, cursos_tomados, avg(toFloat(c_peer)) AS promedio_depto
 WHERE cursos_tomados > promedio_depto
 RETURN s.name      AS estudiante,
        s.dept_name AS depto_estudiante,
@@ -120,12 +123,13 @@ ORDER BY estudiantes_compartidos DESC;
 
 
 // Q10 Estudiantes que reprobaron más cursos que el promedio
+MATCH (s2:Student)-[t2:TAKES]->(:Section)
+WHERE t2.grade = 'F'
+WITH s2, count(t2) AS conteo
+WITH avg(toFloat(conteo)) AS promedio_reprobados
 MATCH (s:Student)-[t:TAKES]->(:Section)
 WHERE t.grade = 'F'
-WITH s.dept_name AS depto, avg(count(t)) AS promedio_reprobados
-MATCH (s:Student)-[t:TAKES]->(:Section)
-WHERE t.grade = 'F' AND s.dept_name = depto
-WITH s, depto, promedio_reprobados, count(t) AS cursos_reprobados
+WITH s, count(t) AS cursos_reprobados, promedio_reprobados
 WHERE cursos_reprobados > promedio_reprobados
 RETURN s.name      AS estudiante,
        s.dept_name,

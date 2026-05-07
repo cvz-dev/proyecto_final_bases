@@ -15,7 +15,7 @@ ORDER BY i.dept_name, i.salary DESC;
 -- Q02 Presupuesto restante por departamento tras pagar salarios
 SELECT d.dept_name,
        d.budget,
-       SUM(i.salary)             AS masa_salarial,
+       SUM(i.salary)             AS total_salario,
        d.budget - SUM(i.salary)  AS presupuesto_restante,
        COUNT(i.ID)               AS num_profesores
 FROM department d
